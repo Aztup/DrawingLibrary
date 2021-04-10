@@ -72,6 +72,20 @@ do -- // Utils
         
         return Vector2.new(x, y);
     end;
+
+    function DrawingLibrary:ConvertToDarkColor(color)
+        local h, s, v = Color3.toHSV(color);
+        v = v - 0.1;
+
+        return Color3.fromHSV(h, s, v);
+    end;
+
+    function DrawingLibrary:ConvertToLightColor(color)
+        local h, s, v = Color3.toHSV(color);
+        v = v + 0.1;
+
+        return Color3.fromHSV(h, s, v);
+    end;
 end;
 
 do -- // Hooks
@@ -171,8 +185,25 @@ do -- // validations
         self._border.Position = myPosition - borderSize/2;
         self._border.Size = self._props.AbsoluteSize + borderSize;
 
-        if(self:IsA('TextLabel')) then
-            self._text.Position = myPosition + self._props.AbsoluteSize/2 - Vector2.new(0, self._text.Size / 2);
+        if(self:IsA('TextLabel') or self:IsA('TextButton')) then
+            local alignmentX = self._props.TextXAlignment;
+            local alignmentY = self._props.TextYAlignment;
+
+            local textSize = self._text.TextBounds;
+
+            if(alignmentX == Enum.TextXAlignment.Left) then
+                textSize = Vector2.new(textSize.X * 2, textSize.Y);
+            elseif(alignmentX == Enum.TextXAlignment.Right) then
+                textSize = Vector2.new(0, textSize.Y);
+            end;
+
+            if(alignmentY == Enum.TextYAlignment.Top) then
+                textSize = Vector2.new(textSize.X, textSize.Y * 2);
+            elseif(alignmentY == Enum.TextYAlignment.Bottom) then
+                textSize = Vector2.new(textSize.X, 0);
+            end;
+
+            self._text.Position = myPosition + self._props.AbsoluteSize/2 - textSize/2;
         end;
     end;
 
@@ -224,6 +255,48 @@ do -- // validations
 
         self._text.Color = value;
     end;
+
+    function DrawingLibrary.Validations:TextStrokeTransparency(value)
+        if(typeof(value) ~= 'number') then
+            return string.format('invalid argument #3 (number expected, got %s)', typeof(value))
+        end;
+
+        self._text.Outline = value == 0;
+    end;
+    
+    function DrawingLibrary.Validations:TextStrokeColor3(value)
+        if(typeof(value) ~= 'Color3') then
+            return string.format('invalid argument #3 (Color3 expected, got %s)', typeof(value))
+        end;
+
+        self._text.OutlineColor = value;
+    end;
+    
+    function DrawingLibrary.Validations:Text(value)
+        if(typeof(value) ~= 'string') then
+            return string.format('invalid argument #3 (string expected, got %s)', typeof(value))
+        end;
+    
+        self._text.Text = value;
+    end;
+
+    function DrawingLibrary.Validations:TextXAlignment(value)
+        if(typeof(value) ~= 'EnumItem') then
+            return string.format('invalid argument #3 (EnumItem expected, got %s)', typeof(value))
+        end;
+    end;
+
+    function DrawingLibrary.Validations:TextYAlignment(value)
+        if(typeof(value) ~= 'EnumItem') then
+            return string.format('invalid argument #3 (EnumItem expected, got %s)', typeof(value))
+        end;
+    end;
+
+    function DrawingLibrary.Validations:AutoButtonColor(value)
+        if(typeof(value) ~= 'boolean') then
+            return string.format('invalid argument #3 (boolean expected, got %s)', typeof(value))
+        end;
+    end;
 end;
 
 do -- // Types
@@ -269,16 +342,81 @@ do -- // Types
     function DrawingLibrary.Types:TextLabel()
         DrawingLibrary.Types.Frame(self);
 
+        self._props.TextXAlignment = Enum.TextXAlignment.Center;
+        self._props.TextYAlignment = Enum.TextXAlignment.Center;
+
         self._text = Drawing.new('Text');
         self._text.Visible = true;
-        self._text.Center = true;
         self._text.Size = 22;
-        self._text.Text = "hello world!";
+        self._text.Text = "Text";
         self._text.Transparency = 1;
     end;
 
+    function DrawingLibrary.Types:TextButton()
+        DrawingLibrary.Types.TextLabel(self);
+
+        self._props.MouseEnter = Signal.new();
+        self._props.MouseLeave = Signal.new();
+        
+        self._props.MouseButton1Click = Signal.new();
+        self._props.MouseButton1Down = Signal.new();
+        self._props.MouseButton1Up = Signal.new();
+
+        self._props.MouseButton2Click = Signal.new();
+        self._props.MouseButton2Down = Signal.new();
+        self._props.MouseButton2Up = Signal.new();
+
+        self._props.InputBegan:Connect(function(input, gpe)
+            print(input.UserInputState, input.UserInputType, input.KeyCode, gpe);
+
+            if(input.UserInputType == Enum.UserInputType.MouseButton1) then
+                if(self._props.AutoButtonColor) then
+                    self._drawing.Color = DrawingLibrary:ConvertToLightColor(self._props.BackgroundColor3);
+                end;
+
+                self._props.MouseButton1Down:Fire(input.Position.X, input.Position.Y);
+            elseif(input.UserInputType == Enum.UserInputType.MouseButton2) then
+                self._props.MouseButton2Down:Fire(input.Position.X, input.Position.Y);
+            end;
+        end);
+
+        self._props.InputEnded:Connect(function(input, gpe)
+            warn(input.UserInputState, input.UserInputType, input.KeyCode, gpe);
+
+            if(input.UserInputType == Enum.UserInputType.MouseButton1) then
+                if(self._props.AutoButtonColor) then
+                    self._drawing.Color = self._props.BackgroundColor3;
+                end;
+
+                self._props.MouseButton1Up:Fire(input.Position.X, input.Position.Y);
+                self._props.MouseButton1Click:Fire();
+            elseif(input.UserInputType == Enum.UserInputType.MouseButton2) then
+                self._props.MouseButton2Up:Fire(input.Position.X, input.Position.Y);
+                self._props.MouseButton2Click:Fire();
+            end;
+        end);
+
+        self._props.InputChanged:Connect(function(input, gpe)
+            if(input.UserInputType == Enum.UserInputType.MouseMovement) then
+                local inputBegin = input.UserInputState == Enum.UserInputState.Begin;
+                local backgroundColor = self._props.BackgroundColor3;
+
+                if(self._props.AutoButtonColor) then
+                    self._drawing.Color = inputBegin and DrawingLibrary:ConvertToDarkColor(backgroundColor) or backgroundColor;
+                end;
+
+                if(inputBegin) then
+                    self._props.MouseEnter:Fire();
+                else
+                    self._props.MouseLeave:Fire();
+                end;
+            end;
+            print('Changed', input, input.UserInputState, input.UserInputType, input.KeyCode, gpe);
+        end);
+    end;
+
     local function updateSize()
-        if(not workspace.CurrentCamera) then return print('no camera!') end;
+        if(not workspace.CurrentCamera) then return end;
         local newViewportSize = workspace.CurrentCamera.ViewportSize;
 
         viewportSize = newViewportSize;
@@ -452,8 +590,6 @@ do -- // DrawingLibrary
         self._props = {};
         self._childrens = {};
         self._hiddenProperties = {};
-
-        DrawingLibrary.Types[name](self);
         
         self._props.InputBegan = Signal.new();
         self._props.InputEnded = Signal.new();
@@ -466,8 +602,11 @@ do -- // DrawingLibrary
         self._props.AbsoluteRotation = 0;
         self._props.AbsoluteSize = Vector2.new();
 
+        DrawingLibrary.Types[name](self);
+        setmetatable(self, DrawingLibrary);
+
         table.insert(DrawingLibraryPrivate.AllObjects, self);
-        return setmetatable(self, DrawingLibrary);
+        return self;
     end;
 
     local function handleInputEvent(inputType, input, gpe)
@@ -508,6 +647,7 @@ local ScreenGui = Instance.new("ScreenGui")
 local Frame = Instance.new("Frame")
 local Frame_2 = Instance.new("Frame")
 local Label = Instance.new('TextLabel');
+local TextButton = Instance.new('TextButton');
 
 Frame.Parent = ScreenGui
 Frame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -520,20 +660,30 @@ Frame.BackgroundTransparency = 0.5;
 
 Label.Parent = ScreenGui;
 Label.TextColor3 = Color3.fromRGB(255, 0, 0);
-Label.BackgroundTransparency = 0;
-Label.Size = UDim2.new(0, 100, 0, 100);
+Label.Text = "Hello!";
+Label.Size = UDim2.new(0, 100, 0, 40);
 Label.Position = UDim2.new(0.8, 0, 0.8, 0);
+Label.TextStrokeColor3 = Color3.new();
+Label.TextStrokeTransparency = 0;
 
-Frame.InputBegan:Connect(function(input, gpe)
+TextButton.Parent = ScreenGui;
+TextButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100);
+TextButton.Size = UDim2.new(0, 100, 0, 20);
+TextButton.Position = UDim2.new(0.3, 0, 0.3, 0);
+TextButton.Text = "Click Me!";
+TextButton.AutoButtonColor = true;
+TextButton.TextColor3 = Color3.fromRGB(255, 255, 255);
 
+TextButton.MouseButton1Click:Connect(function()
+    print('click');
 end);
 
-Frame.InputChanged:Connect(function(input, gpe)
-    print('Input Changed', input.UserInputState, input.UserInputType, input.KeyCode);
+TextButton.MouseButton1Down:Connect(function()
+    print('down');
 end);
 
-Frame.InputEnded:Connect(function(input, gpe)
-    print('Input Ended', input);
+TextButton.MouseButton1Up:Connect(function()
+    print('up');
 end);
 
 Frame_2.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -541,3 +691,6 @@ Frame_2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Frame_2.Position = UDim2.new(0.5, 0, 0.5, 0)
 Frame_2.Size = UDim2.new(0.100000001, 0, 0.100000001, 0)
 Frame_2.Parent = Frame
+
+wait(2);
+Label.TextXAlignment = Enum.TextXAlignment.Center;
