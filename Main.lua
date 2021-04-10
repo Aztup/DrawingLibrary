@@ -170,6 +170,10 @@ do -- // validations
 
         self._border.Position = myPosition - borderSize/2;
         self._border.Size = self._props.AbsoluteSize + borderSize;
+
+        if(self:IsA('TextLabel')) then
+            self._text.Position = myPosition + self._props.AbsoluteSize/2 - Vector2.new(0, self._text.Size / 2);
+        end;
     end;
 
     function DrawingLibrary.Validations:BorderSizePixel(value)
@@ -252,6 +256,17 @@ do -- // Types
         self.TweenSize = DrawingLibraryPrivate.TweenSize;
         self.TweenPosition = DrawingLibraryPrivate.TweenPosition;
         self.TweenSizeAndPosition = DrawingLibraryPrivate.TweenSizeAndPosition;
+    end;
+
+    function DrawingLibrary.Types:TextLabel()
+        DrawingLibrary.Types.Frame(self);
+
+        self._text = Drawing.new('Text');
+        self._text.Visible = true;
+        self._text.Center = true;
+        self._text.Size = 22;
+        self._text.Text = "hello world!";
+        self._text.Transparency = 1;
     end;
 
     local function updateSize()
@@ -484,6 +499,7 @@ local Instance = DrawingLibrary;
 local ScreenGui = Instance.new("ScreenGui")
 local Frame = Instance.new("Frame")
 local Frame_2 = Instance.new("Frame")
+local Label = Instance.new('TextLabel');
 
 Frame.Parent = ScreenGui
 Frame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -493,6 +509,10 @@ Frame.Size = UDim2.new(0, 100, 0, 100)
 Frame.BorderSizePixel = 10;
 Frame.BorderColor3 = Color3.fromRGB(255, 0, 0);
 Frame.BackgroundTransparency = 0.5;
+
+Label.Parent = ScreenGui;
+Label.Size = UDim2.new(0, 100, 0, 100);
+Label.Position = UDim2.new(0.8, 0, 0.8, 0);
 
 Frame.InputBegan:Connect(function(input, gpe)
 
