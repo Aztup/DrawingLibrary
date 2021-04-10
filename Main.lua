@@ -145,7 +145,7 @@ do -- // validations
             return string.format('invalid argument #3 (number expected, got %s)', typeof(value))
         end;
 
-        self._drawing.Transparency = value;
+        self._drawing.Transparency = 1 - value;
     end;
 
     function DrawingLibrary.Validations:Position(value)
@@ -215,6 +215,14 @@ do -- // validations
         if(typeof(value) ~= 'string') then
             return string.format('invalid argument #3 (string expected, got %s)', typeof(value))
         end;
+    end;
+
+    function DrawingLibrary.Validations:TextColor3(value)
+        if(typeof(value) ~= 'Color3') then
+            return string.format('invalid argument #3 (Color3 expected, got %s)', typeof(value))
+        end;
+
+        self._text.Color = value;
     end;
 end;
 
@@ -511,6 +519,8 @@ Frame.BorderColor3 = Color3.fromRGB(255, 0, 0);
 Frame.BackgroundTransparency = 0.5;
 
 Label.Parent = ScreenGui;
+Label.TextColor3 = Color3.fromRGB(255, 0, 0);
+Label.BackgroundTransparency = 0;
 Label.Size = UDim2.new(0, 100, 0, 100);
 Label.Position = UDim2.new(0.8, 0, 0.8, 0);
 
@@ -531,5 +541,3 @@ Frame_2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Frame_2.Position = UDim2.new(0.5, 0, 0.5, 0)
 Frame_2.Size = UDim2.new(0.100000001, 0, 0.100000001, 0)
 Frame_2.Parent = Frame
-
-table.foreach(Frame:GetDescendants(), print);
