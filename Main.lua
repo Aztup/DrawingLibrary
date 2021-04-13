@@ -185,25 +185,33 @@ do -- // validations
         self._border.Position = myPosition - borderSize/2;
         self._border.Size = self._props.AbsoluteSize + borderSize;
 
-        if(self:IsA('TextLabel') or self:IsA('TextButton')) then
+        if(self:IsA('TextLabel') or self:IsA('TextButton') or self:IsA('TextBox')) then
             local alignmentX = self._props.TextXAlignment;
             local alignmentY = self._props.TextYAlignment;
 
             local textSize = self._text.TextBounds;
+            local frameSize = self._props.AbsoluteSize;
+            local textPosition = myPosition;
 
-            if(alignmentX == Enum.TextXAlignment.Left) then
-                textSize = Vector2.new(textSize.X * 2, textSize.Y);
+            if(alignmentX == Enum.TextXAlignment.Center) then
+                textPosition = textPosition + frameSize / 2 - Vector2.new(0, textSize.Y / 2);
             elseif(alignmentX == Enum.TextXAlignment.Right) then
-                textSize = Vector2.new(0, textSize.Y);
+                textPosition = textPosition + Vector2.new(frameSize.X, frameSize.Y / 2) - textSize / 2;
+            elseif(alignmentX == Enum.TextXAlignment.Left) then
+                textPosition = textPosition + Vector2.new(0, frameSize.Y / 2) - Vector2.new(-(textSize.X / 2), textSize.Y / 2);
             end;
 
-            if(alignmentY == Enum.TextYAlignment.Top) then
-                textSize = Vector2.new(textSize.X, textSize.Y * 2);
-            elseif(alignmentY == Enum.TextYAlignment.Bottom) then
-                textSize = Vector2.new(textSize.X, 0);
-            end;
-
-            self._text.Position = myPosition + self._props.AbsoluteSize/2 - textSize/2;
+            -- if(alignmentY == Enum.TextYAlignment.Top) then
+            --     textSize = Vector2.new(textSize.X, textSize.Y * 2);
+            -- elseif(alignmentY == Enum.TextYAlignment.Bottom) then
+            --     textSize = Vector2.new(textSize.X, 0);
+            -- end;
+            -- + Vector2.new(self._text.TextBounds.X, 0) / 2
+            
+            self._text.Position = textPosition;
+            -- self._text.Position = myPosition + self._props.AbsoluteSize/2 - Vector2.new(0, self._text.TextBounds.Y/2); -- Center
+            -- self._text.Position = myPosition + Vector2.new(self._props.AbsoluteSize.X, self._props.AbsoluteSize.Y/2) - self._text.TextBounds / 2; -- Right
+            -- self._text.Position = myPosition + Vector2.new(0, self._props.AbsoluteSize.Y/2) - Vector2.new(-(self._text.TextBounds.X/2), self._text.TextBounds.Y / 2); -- Left
         end;
     end;
 
@@ -276,7 +284,8 @@ do -- // validations
         if(typeof(value) ~= 'string') then
             return string.format('invalid argument #3 (string expected, got %s)', typeof(value))
         end;
-    
+
+        self.Position = self._props.Position;
         self._text.Text = value;
     end;
 
@@ -303,6 +312,16 @@ do -- // Types
     local viewportSize = Vector2.new();
 
     DrawingLibrary.Types = {};
+    local keyCodesArray = {};
+    local digits = {};
+
+    for i, v in next, Enum.KeyCode:GetEnumItems() do
+        keyCodesArray[v.Value] = v;
+    end;
+
+    for i = 48, 57 do
+        digits[keyCodesArray[i]] = tostring(9 - (57 - i));
+    end;
     
     function DrawingLibrary.Types:ScreenGui()
         self._props.Enabled = true;
@@ -348,6 +367,7 @@ do -- // Types
         self._text = Drawing.new('Text');
         self._text.Visible = true;
         self._text.Size = 22;
+        self._text.Center = true;
         self._text.Text = "Text";
         self._text.Transparency = 1;
     end;
@@ -412,6 +432,60 @@ do -- // Types
                 end;
             end;
             print('Changed', input, input.UserInputState, input.UserInputType, input.KeyCode, gpe);
+        end);
+    end;
+
+    function DrawingLibrary.Types:TextBox()
+        DrawingLibrary.Types.TextLabel(self);
+
+        local isActive = false;
+        self._props.InputBegan:Connect(function(input)
+            if(input.UserInputType == Enum.UserInputType.MouseButton1) then
+                isActive = true;
+                self.Text = "";
+                return
+            end;
+        end);
+
+        local proxyID = 0;
+
+        UserInputService.InputBegan:Connect(function(input)
+            if(not isActive or not input.KeyCode) then return end;
+            proxyID = proxyID + 1;
+            local currentProxyID = proxyID;
+
+            local str = digits[input.KeyCode] or UserInputService:GetStringForKeyCode(input.KeyCode);
+            if(not input:IsModifierKeyDown(Enum.ModifierKey.Shift)) then
+                str = string.lower(str);
+            end;
+            
+            if(input.KeyCode == Enum.KeyCode.Backspace) then
+                self.Text = self.Text:sub(1, #self.Text-1);
+            else
+                self.Text = self.Text .. str;
+            end;
+
+            wait(0.5);
+            if(currentProxyID ~= proxyID) then return end;
+
+            if(input.UserInputState == Enum.UserInputState.Begin) then
+                repeat
+                    if(input.KeyCode == Enum.KeyCode.Backspace) then
+                        self.Text = self.Text:sub(1, #self.Text-1);
+                    else
+                        self.Text = self.Text .. str;
+                    end;
+
+                    wait();
+                until input.UserInputState == Enum.UserInputState.End;
+            end;
+        end);
+
+        UserInputService.InputEnded:Connect(function(input)
+            if(input.KeyCode == Enum.KeyCode.Return) then
+                isActive = false;
+                return
+            end;
         end);
     end;
 
@@ -648,6 +722,7 @@ local Frame = Instance.new("Frame")
 local Frame_2 = Instance.new("Frame")
 local Label = Instance.new('TextLabel');
 local TextButton = Instance.new('TextButton');
+local TextBox = Instance.new('TextBox');
 
 Frame.Parent = ScreenGui
 Frame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -674,7 +749,15 @@ TextButton.Text = "Click Me!";
 TextButton.AutoButtonColor = true;
 TextButton.TextColor3 = Color3.fromRGB(255, 255, 255);
 
+TextBox.Parent = ScreenGui;
+TextBox.BackgroundColor3 = Color3.fromRGB(100, 100, 100);
+TextBox.Size = UDim2.new(0, 250, 0, 20);
+TextBox.Position = UDim2.new(0.5, 0, 0.8, 0);
+TextBox.Text = "Text Box";
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255);
+
 TextButton.MouseButton1Click:Connect(function()
+    TextBox.TextXAlignment = Enum.TextXAlignment.Left;
     print('click');
 end);
 
