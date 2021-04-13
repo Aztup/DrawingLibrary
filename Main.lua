@@ -201,17 +201,13 @@ do -- // validations
                 textPosition = textPosition + Vector2.new(0, frameSize.Y / 2) - Vector2.new(-(textSize.X / 2), textSize.Y / 2);
             end;
 
-            -- if(alignmentY == Enum.TextYAlignment.Top) then
-            --     textSize = Vector2.new(textSize.X, textSize.Y * 2);
-            -- elseif(alignmentY == Enum.TextYAlignment.Bottom) then
-            --     textSize = Vector2.new(textSize.X, 0);
-            -- end;
-            -- + Vector2.new(self._text.TextBounds.X, 0) / 2
-            
+            if(alignmentY == Enum.TextYAlignment.Top) then
+                textPosition = textPosition - Vector2.new(0, frameSize.Y/2) + Vector2.new(0, textSize.Y/2);
+            elseif(alignmentY == Enum.TextYAlignment.Bottom) then
+                textPosition = textPosition + Vector2.new(0, frameSize.Y/2) - Vector2.new(0, textSize.Y/2);
+            end;
+
             self._text.Position = textPosition;
-            -- self._text.Position = myPosition + self._props.AbsoluteSize/2 - Vector2.new(0, self._text.TextBounds.Y/2); -- Center
-            -- self._text.Position = myPosition + Vector2.new(self._props.AbsoluteSize.X, self._props.AbsoluteSize.Y/2) - self._text.TextBounds / 2; -- Right
-            -- self._text.Position = myPosition + Vector2.new(0, self._props.AbsoluteSize.Y/2) - Vector2.new(-(self._text.TextBounds.X/2), self._text.TextBounds.Y / 2); -- Left
         end;
     end;
 
@@ -776,4 +772,4 @@ Frame_2.Size = UDim2.new(0.100000001, 0, 0.100000001, 0)
 Frame_2.Parent = Frame
 
 wait(2);
-Label.TextXAlignment = Enum.TextXAlignment.Center;
+Label.TextYAlignment = Enum.TextYAlignment.Top;
