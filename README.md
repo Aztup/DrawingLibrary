@@ -3,3 +3,6 @@ It currently supports
 - Frame
 - ScreenGui
 - Offset & Scale Size / Position
+- Text Button
+- Text Label
+- Text Box
