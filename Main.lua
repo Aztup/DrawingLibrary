@@ -591,10 +591,6 @@ do -- // DrawingLibrary
     function DrawingLibrary:Destroy()
         self._maid:Destroy();
 
-        if(rawget(self, '_border')) then
-            self._border:Remove();
-        end;
-
         for i, v in next, self:GetChildren() do
             v:Destroy();
         end;
