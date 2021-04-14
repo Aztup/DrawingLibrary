@@ -1,3 +1,7 @@
+if(shared.DrawingLibrary) then
+    return shared.DrawingLibrary
+end;
+
 local RunService = game:GetService('RunService');
 local TweenService = game:GetService('TweenService');
 local UserInputService = game:GetService('UserInputService');
@@ -39,7 +43,7 @@ end;
 
 do -- // Hooks
     if(not shared.DrawingLibrary) then
-        shared.DrawingLibrary = true;
+        shared.DrawingLibrary = DrawingLibrary;
 
         local old;
         old = hookfunction(typeof, newcclosure(function(self)
@@ -385,6 +389,8 @@ do -- // Types
         DrawingLibrary.Types.TextLabel(self);
 
         local isActive = false;
+        local isMouseIn = false;
+
         local proxyID = 0;
 
         self._maid:GiveTask(self._props.InputBegan:Connect(function(input)
@@ -419,8 +425,15 @@ do -- // Types
             end;
         end));
 
+        self._maid:GiveTask(self._props.InputChanged:Connect(function(input)
+            if(input.UserInputType ~= Enum.UserInputType.MouseMovement) then return end;
+            isMouseIn = input.UserInputState == Enum.UserInputState.Begin;
+        end));
+
         self._maid:GiveTask(UserInputService.InputEnded:Connect(function(input)
-            if(input.KeyCode == Enum.KeyCode.Return) then
+            if(not isActive) then return end;
+
+            if(input.KeyCode == Enum.KeyCode.Return or (input.UserInputType == Enum.UserInputType.MouseButton1 and not isMouseIn)) then
                 isActive = false;
                 return;
             end;
@@ -663,65 +676,4 @@ do -- // DrawingLibrary
     UserInputService.InputEnded:Connect(function(...) handleInputEvent('InputEnded', ...) end);
 end;
 
-local Instance = DrawingLibrary;
-
-local ScreenGui = Instance.new("ScreenGui")
-local Frame = Instance.new("Frame")
-local Frame_2 = Instance.new("Frame")
-local Label = Instance.new('TextLabel');
-local TextButton = Instance.new('TextButton');
-local TextBox = Instance.new('TextBox');
-
-Frame.Parent = ScreenGui
-Frame.AnchorPoint = Vector2.new(0.5, 0.5)
-Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-Frame.Size = UDim2.new(0, 100, 0, 100)
-Frame.BorderSizePixel = 10;
-Frame.BorderColor3 = Color3.fromRGB(255, 0, 0);
-Frame.BackgroundTransparency = 0.5;
-
-Label.Parent = ScreenGui;
-Label.TextColor3 = Color3.fromRGB(255, 0, 0);
-Label.Text = "Hello!";
-Label.Size = UDim2.new(0, 100, 0, 40);
-Label.Position = UDim2.new(0.8, 0, 0.8, 0);
-Label.TextStrokeColor3 = Color3.new();
-Label.TextStrokeTransparency = 0;
-
-TextButton.Parent = ScreenGui;
-TextButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100);
-TextButton.Size = UDim2.new(0, 100, 0, 20);
-TextButton.Position = UDim2.new(0.3, 0, 0.3, 0);
-TextButton.Text = "Click Me!";
-TextButton.AutoButtonColor = true;
-TextButton.TextColor3 = Color3.fromRGB(255, 255, 255);
-
-TextBox.Parent = ScreenGui;
-TextBox.BackgroundColor3 = Color3.fromRGB(100, 100, 100);
-TextBox.Size = UDim2.new(0, 250, 0, 20);
-TextBox.Position = UDim2.new(0.5, 0, 0.8, 0);
-TextBox.Text = "Text Box";
-TextBox.TextColor3 = Color3.fromRGB(255, 255, 255);
-
-TextButton.MouseButton1Click:Connect(function()
-    TextBox.TextXAlignment = Enum.TextXAlignment.Left;
-    print('click');
-end);
-
-TextButton.MouseButton1Down:Connect(function()
-    print('down');
-end);
-
-TextButton.MouseButton1Up:Connect(function()
-    print('up');
-end);
-
-Frame_2.AnchorPoint = Vector2.new(0.5, 0.5)
-Frame_2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Frame_2.Position = UDim2.new(0.5, 0, 0.5, 0)
-Frame_2.Size = UDim2.new(0.100000001, 0, 0.100000001, 0)
-Frame_2.Parent = Frame
-
-wait(2);
-Label.TextYAlignment = Enum.TextYAlignment.Top;
+return DrawingLibrary;
