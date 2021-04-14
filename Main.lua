@@ -589,7 +589,6 @@ do -- // DrawingLibrary
     end;
 
     function DrawingLibrary:Destroy()
-        self._drawing:Remove();
         self._maid:Destroy();
 
         if(rawget(self, '_border')) then
