@@ -1,66 +1,15 @@
 local RunService = game:GetService('RunService');
 local TweenService = game:GetService('TweenService');
 local UserInputService = game:GetService('UserInputService');
-local Players = game:GetService('Players');
-
-local LocalPlayer = Players.LocalPlayer;
-local Mouse = LocalPlayer:GetMouse();
 
 local DrawingLibrary = {};
 local DrawingLibraryPrivate = {};
 local screenGUIs = {};
-local Signal = {}
 
-do  -- // Packages
-    do -- // Signal
-        Signal.__index = Signal
-        Signal.ClassName = "Signal"
-        
-        function Signal.new()
-            local self = setmetatable({}, Signal)
-        
-            self._bindableEvent = Instance.new("BindableEvent")
-            self._argData = nil
-            self._argCount = nil
-        
-            return self
-        end
-        
-        function Signal:Fire(...)
-            self._argData = {...}
-            self._argCount = select("#", ...)
-            self._bindableEvent:Fire()
-            self._argData = nil
-            self._argCount = nil
-        end
-        
-        function Signal:Connect(handler)
-            if not (type(handler) == "function") then
-                error(("connect(%s)"):format(typeof(handler)), 2)
-            end
-        
-            return self._bindableEvent.Event:Connect(function()
-                handler(unpack(self._argData, 1, self._argCount))
-            end)
-        end
-        
-        function Signal:Wait()
-            self._bindableEvent.Event:Wait()
-            assert(self._argData, "Missing arg data, likely due to :TweenSize/Position corrupting threadrefs.")
-            return unpack(self._argData, 1, self._argCount)
-        end
-        
-        function Signal:Destroy()
-            if self._bindableEvent then
-                self._bindableEvent:Destroy()
-                self._bindableEvent = nil
-            end
-        
-            self._argData = nil
-            self._argCount = nil
-        end
-    end;
-end
+local Maid = loadstring(game:HttpGet('https://raw.githubusercontent.com/Aztup/Aztup-Hub-V3-Utils/main/Maid.lua'))()
+local Signal = loadstring(game:HttpGet('https://raw.githubusercontent.com/Aztup/Aztup-Hub-V3-Utils/main/Signal.lua'))()
+
+DrawingLibrary.DrawingLibrary = true;
 
 do -- // Utils
     function DrawingLibrary:ConvertToOffset(childSize, parentSize)
@@ -96,8 +45,11 @@ do -- // Hooks
         old = hookfunction(typeof, newcclosure(function(self)
             if(not checkcaller()) then return old(self) end;
     
-            if(type(self) == 'table' and old(self.IsA) == 'function' and self:IsA('DrawingLibrary')) then
-                return 'DrawingLibrary';
+            if(old(self) == 'table') then
+                local mt = getrawmetatable(self);
+                if(mt and rawget(mt, 'DrawingLibrary')) then
+                    return 'DrawingLibrary';
+                end;
             end;
 
             return old(self);
@@ -202,9 +154,9 @@ do -- // validations
             end;
 
             if(alignmentY == Enum.TextYAlignment.Top) then
-                textPosition = textPosition - Vector2.new(0, frameSize.Y/2) + Vector2.new(0, textSize.Y/2);
+                textPosition = textPosition - Vector2.new(0, frameSize.Y / 2) + Vector2.new(0, textSize.Y / 2);
             elseif(alignmentY == Enum.TextYAlignment.Bottom) then
-                textPosition = textPosition + Vector2.new(0, frameSize.Y/2) - Vector2.new(0, textSize.Y/2);
+                textPosition = textPosition + Vector2.new(0, frameSize.Y / 2) - Vector2.new(0, textSize.Y / 2);
             end;
 
             self._text.Position = textPosition;
@@ -341,6 +293,7 @@ do -- // Types
         self._drawing.Color = self._props.BackgroundColor3;
         self._drawing.Visible = false;
         self._drawing.Transparency = 1;
+        self._maid:GiveTask(self._drawing);
 
         self._border = Drawing.new('Square');
         self._border.Filled = false;
@@ -348,6 +301,7 @@ do -- // Types
         self._border.Color = self._props.BorderColor3;
         self._border.Visible = false;
         self._border.Transparency = 1;
+        self._maid:GiveTask(self._border);
 
         self.TweenSize = DrawingLibraryPrivate.TweenSize;
         self.TweenPosition = DrawingLibraryPrivate.TweenPosition;
@@ -366,6 +320,7 @@ do -- // Types
         self._text.Center = true;
         self._text.Text = "Text";
         self._text.Transparency = 1;
+        self._maid:GiveTask(self._text);
     end;
 
     function DrawingLibrary.Types:TextButton()
@@ -382,9 +337,7 @@ do -- // Types
         self._props.MouseButton2Down = Signal.new();
         self._props.MouseButton2Up = Signal.new();
 
-        self._props.InputBegan:Connect(function(input, gpe)
-            print(input.UserInputState, input.UserInputType, input.KeyCode, gpe);
-
+        self._maid:GiveTask(self._props.InputBegan:Connect(function(input, gpe)
             if(input.UserInputType == Enum.UserInputType.MouseButton1) then
                 if(self._props.AutoButtonColor) then
                     self._drawing.Color = DrawingLibrary:ConvertToLightColor(self._props.BackgroundColor3);
@@ -394,11 +347,9 @@ do -- // Types
             elseif(input.UserInputType == Enum.UserInputType.MouseButton2) then
                 self._props.MouseButton2Down:Fire(input.Position.X, input.Position.Y);
             end;
-        end);
+        end));
 
-        self._props.InputEnded:Connect(function(input, gpe)
-            warn(input.UserInputState, input.UserInputType, input.KeyCode, gpe);
-
+        self._maid:GiveTask(self._props.InputEnded:Connect(function(input, gpe)
             if(input.UserInputType == Enum.UserInputType.MouseButton1) then
                 if(self._props.AutoButtonColor) then
                     self._drawing.Color = self._props.BackgroundColor3;
@@ -410,9 +361,9 @@ do -- // Types
                 self._props.MouseButton2Up:Fire(input.Position.X, input.Position.Y);
                 self._props.MouseButton2Click:Fire();
             end;
-        end);
+        end));
 
-        self._props.InputChanged:Connect(function(input, gpe)
+        self._maid:GiveTask(self._props.InputChanged:Connect(function(input, gpe)
             if(input.UserInputType == Enum.UserInputType.MouseMovement) then
                 local inputBegin = input.UserInputState == Enum.UserInputState.Begin;
                 local backgroundColor = self._props.BackgroundColor3;
@@ -427,62 +378,53 @@ do -- // Types
                     self._props.MouseLeave:Fire();
                 end;
             end;
-            print('Changed', input, input.UserInputState, input.UserInputType, input.KeyCode, gpe);
-        end);
+        end));
     end;
 
     function DrawingLibrary.Types:TextBox()
         DrawingLibrary.Types.TextLabel(self);
 
         local isActive = false;
-        self._props.InputBegan:Connect(function(input)
+        local proxyID = 0;
+
+        self._maid:GiveTask(self._props.InputBegan:Connect(function(input)
             if(input.UserInputType == Enum.UserInputType.MouseButton1) then
                 isActive = true;
                 self.Text = "";
                 return
             end;
-        end);
+        end));
 
-        local proxyID = 0;
-
-        UserInputService.InputBegan:Connect(function(input)
+        self._maid:GiveTask(UserInputService.InputBegan:Connect(function(input)
             if(not isActive or not input.KeyCode) then return end;
-            proxyID = proxyID + 1;
-            local currentProxyID = proxyID;
 
+            proxyID = proxyID + 1;
+
+            local currentProxyID = proxyID;
             local str = digits[input.KeyCode] or UserInputService:GetStringForKeyCode(input.KeyCode);
+
             if(not input:IsModifierKeyDown(Enum.ModifierKey.Shift)) then
                 str = string.lower(str);
             end;
-            
-            if(input.KeyCode == Enum.KeyCode.Backspace) then
-                self.Text = self.Text:sub(1, #self.Text-1);
-            else
-                self.Text = self.Text .. str;
-            end;
 
+            DrawingLibraryPrivate.SetText(self, input, str);
             wait(0.5);
-            if(currentProxyID ~= proxyID) then return end;
 
+            if(currentProxyID ~= proxyID) then return end;
             if(input.UserInputState == Enum.UserInputState.Begin) then
                 repeat
-                    if(input.KeyCode == Enum.KeyCode.Backspace) then
-                        self.Text = self.Text:sub(1, #self.Text-1);
-                    else
-                        self.Text = self.Text .. str;
-                    end;
-
+                    DrawingLibraryPrivate.SetText(self, input, str);
                     wait();
                 until input.UserInputState == Enum.UserInputState.End;
             end;
-        end);
+        end));
 
-        UserInputService.InputEnded:Connect(function(input)
+        self._maid:GiveTask(UserInputService.InputEnded:Connect(function(input)
             if(input.KeyCode == Enum.KeyCode.Return) then
                 isActive = false;
-                return
+                return;
             end;
-        end);
+        end));
     end;
 
     local function updateSize()
@@ -587,6 +529,14 @@ do -- // DrawingLibrary
         return DrawingLibraryPrivate.PerformTween(self, 'Size', ...);
     end;
 
+    function DrawingLibraryPrivate:SetText(input, str)
+        if(input.KeyCode == Enum.KeyCode.Backspace) then
+            self.Text = self.Text:sub(1, #self.Text-1);
+        else
+            self.Text = self.Text .. str;
+        end;
+    end;
+
     function DrawingLibraryPrivate:GiveChildrens(descendants, object)
         table.insert(descendants, object);
 
@@ -627,6 +577,7 @@ do -- // DrawingLibrary
 
     function DrawingLibrary:Destroy()
         self._drawing:Remove();
+        self._maid:Destroy();
 
         if(rawget(self, '_border')) then
             self._border:Remove();
@@ -640,7 +591,7 @@ do -- // DrawingLibrary
     function DrawingLibrary:_Update()
         DrawingLibrary.__newindex(self, 'Parent', self._props.Parent, true);
 
-        if(not self:IsA('ScreenGui')) then
+        if (not self:IsA('ScreenGui')) then
             DrawingLibrary.__newindex(self, 'Size', self._props.Size, true);
             DrawingLibrary.__newindex(self, 'Position', self._props.Position, true);
         end;
@@ -657,6 +608,7 @@ do -- // DrawingLibrary
 
         local self = {};
 
+        self._maid = Maid.new();
         self._props = {};
         self._childrens = {};
         self._hiddenProperties = {};
